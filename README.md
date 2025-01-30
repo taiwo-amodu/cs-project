@@ -9,7 +9,7 @@
 
 
 
-                      Example Use Case
+                              Example Use Case
 A user is in an unfamiliar area and needs to find the nearest hospital.
 
 They open the Emergency Service Locator app and allow it to access their location.
