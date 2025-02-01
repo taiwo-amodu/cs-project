@@ -3,5 +3,3 @@ psycopg2==2.9.6
 geopandas==0.13.2
 shapely==2.0.1
 requests==2.31.0
-gunicorn==20.1.0
-Flask-CORS==4.0.0
