@@ -15,10 +15,20 @@ def extract_osm_data(bbox):
     [out:json];
     (
       node["amenity"="hospital"]({bbox});
+      way["amenity"="hospital"]({bbox});
+      relation["amenity"="hospital"]({bbox});
+
       node["amenity"="police"]({bbox});
+      way["amenity"="police"]({bbox});
+      relation["amenity"="police"]({bbox});
+
       node["amenity"="fire_station"]({bbox});
+      way["amenity"="fire_station"]({bbox});
+      relation["amenity"="fire_station"]({bbox});
     );
     out body;
+    >;
+    out skel qt;
     """
     try:
         logger.info("Fetching data from Overpass API...")
@@ -31,6 +41,20 @@ def extract_osm_data(bbox):
         logger.error(f"Error fetching data from Overpass API: {e}")
         return None
 
+def calculate_centroid(geometry):
+    """Calculate the centroid of a way or relation based on its geometry."""
+    if not geometry:
+        return None
+
+    # Extract latitudes and longitudes from the geometry
+    lats = [point['lat'] for point in geometry]
+    lons = [point['lon'] for point in geometry]
+
+    # Calculate the average latitude and longitude
+    centroid_lat = sum(lats) / len(lats)
+    centroid_lon = sum(lons) / len(lons)
+    return {'lat': centroid_lat, 'lon': centroid_lon}
+
 def transform_osm_data(data):
     """Transform OSM data into a list of dictionaries with relevant fields."""
     services = []
@@ -38,26 +62,42 @@ def transform_osm_data(data):
         service = {
             'name': element.get('tags', {}).get('name', 'Unknown'),
             'type': element.get('tags', {}).get('amenity', 'Unknown'),
-            'latitude': element.get('lat'),
-            'longitude': element.get('lon'),
             'address': element.get('tags', {}).get('addr:full', ''),
             'contact_info': element.get('tags', {}).get('phone', '')
         }
+
+        # Handle nodes
+        if element['type'] == 'node':
+            service['latitude'] = element.get('lat')
+            service['longitude'] = element.get('lon')
+
+        # Handle ways and relations
+        elif element['type'] in ['way', 'relation']:
+            centroid = calculate_centroid(element.get('geometry', []))
+            if centroid:
+                service['latitude'] = centroid['lat']
+                service['longitude'] = centroid['lon']
+            else:
+                logger.warning(f"Skipping {element['type']} {element['id']} due to missing geometry.")
+                continue
+
         services.append(service)
+
     logger.info(f"Transformed {len(services)} records.")
     return services
 
-def load_data_to_db(services):
+def load_data_to_db(services,table_name="emergency_services"):
     """Load transformed data into the PostgreSQL database."""
     # Fetch database credentials from environment variables
-    dbname = os.getenv('DB_NAME', 'emergency_services')
-    user = os.getenv('DB_USER', 'your_username')
-    password = os.getenv('DB_PASSWORD', 'your_password')
+    dbname = os.getenv('DB_NAME', 'esl')
+    user = os.getenv('DB_USER', 'postgres')
+    password = os.getenv('DB_PASSWORD', 'postgres')
     host = os.getenv('DB_HOST', 'localhost')
+    port = os.getenv('DB_PORT', '5432')
 
     try:
         # Use a context manager for database connection
-        with psycopg2.connect(dbname=dbname, user=user, password=password, host=host) as conn:
+        with psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port) as conn:
             with conn.cursor() as cur:
                 # Use batch insertion for better performance
                 execute_values(cur, """
@@ -73,14 +113,14 @@ if __name__ == "__main__":
     # Bounding box for Lisbon (south, west, north, east)
     bbox = "38.70, -9.23, 38.80, -9.09"
     logger.info(f"Fetching data for Lisbon (Bounding Box: {bbox})...")
-    
+
     # Extract data from OSM
     osm_data = extract_osm_data(bbox)
-    
+
     if osm_data:
         # Transform data
         services = transform_osm_data(osm_data)
-        
+
         if services:
             # Load data into the database
             load_data_to_db(services)
