@@ -3,3 +3,5 @@ psycopg2==2.9.6
 geopandas==0.13.2
 shapely==2.0.1
 requests==2.31.0
+flask-cors==3.0.10
+python-dotenv==1.0.0
