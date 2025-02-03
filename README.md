@@ -17,6 +17,8 @@ o	Add additional metadata, such as travel time (using routing algorithms) or ser
 •	Load:
 o	Load the transformed data into a PostgreSQL/PostGIS database. PostGIS will allow you to perform spatial queries, such as finding the nearest services based on the user’s location.
 o	
+
+
 2. CRUD Module (Create, Read, Update, Delete)
 •	Create:
 o	Allow users or administrators to add new emergency services to the database. For example, if a new hospital is built, it can be added manually.
