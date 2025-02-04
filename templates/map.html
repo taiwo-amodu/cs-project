@@ -8,6 +8,7 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css" />
+  <script src="https://unpkg.com/@turf/turf"></script>
   <style>
     body { margin: 0; padding: 0; }
     #map { width: 100%; height: 100vh; }
@@ -29,10 +30,8 @@
   <div id="map"></div>
 
   <script>
-    // acessing mapbox api
     mapboxgl.accessToken = 'pk.eyJ1IjoidGF5ZWVlZSIsImEiOiJjbTZuZXc3NmEwdWd4MmxzbWZnNm42Mnl4In0.w--ev1D5hZU_IGSvHqnJow';
 
-    // Initialize the map
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -40,42 +39,47 @@
       zoom: 12
     });
 
-    // Initialize the geocoder
     const geocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       placeholder: 'Search for a location',
       marker: false
     });
-
-    // Add the geocoder to the map
+    
     map.addControl(geocoder);
+    map.addControl(new mapboxgl.NavigationControl());
 
-    // Handle search results
     geocoder.on('result', (event) => {
       const result = event.result;
-      console.log('Search Result:', result);
+      map.flyTo({ center: result.center, zoom: 14 });
 
-      // Center the map on the search result
-      map.flyTo({
-        center: result.center,
-        zoom: 14
-      });
-
-      // Add a marker for the search result
       new mapboxgl.Marker()
         .setLngLat(result.center)
         .setPopup(new mapboxgl.Popup().setHTML(`<h3>${result.place_name}</h3>`))
         .addTo(map);
     });
 
-    // Fetch emergency services data from Flask API
+    // Custom icons for emergency services
+    const serviceIcons = {
+      "hospital": "https://img.icons8.com/color/48/000000/hospital.png",
+      "fire_station": "https://img.icons8.com/color/48/000000/fire-station.png",
+      "police": "https://img.icons8.com/color/48/000000/policeman.png"
+    };
+
     fetch('/api/services')
       .then(response => response.json())
       .then(data => {
         data.forEach(service => {
-          // Create a marker for each service
-          new mapboxgl.Marker()
+          let icon = serviceIcons[service.type] || "https://img.icons8.com/color/48/000000/marker.png";
+          
+          const el = document.createElement('div');
+          el.className = 'marker';
+          el.style.backgroundImage = `url(${icon})`;
+          el.style.width = '40px';
+          el.style.height = '40px';
+          el.style.backgroundSize = 'cover';
+
+          new mapboxgl.Marker(el)
             .setLngLat([service.longitude, service.latitude])
             .setPopup(new mapboxgl.Popup().setHTML(`
               <h3>${service.name}</h3>
@@ -85,7 +89,49 @@
             `))
             .addTo(map);
         });
-      });
+      })
+      .catch(error => console.error('Error fetching services:', error));
+
+    // User location and nearest emergency service
+    navigator.geolocation.getCurrentPosition(position => {
+      const userLocation = [position.coords.longitude, position.coords.latitude];
+
+      new mapboxgl.Marker({ color: "blue" })
+        .setLngLat(userLocation)
+        .setPopup(new mapboxgl.Popup().setHTML('<h3>Your Location</h3>'))
+        .addTo(map);
+
+      map.flyTo({ center: userLocation, zoom: 14 });
+
+      fetch('/api/services')
+        .then(response => response.json())
+        .then(data => {
+          let nearest = null;
+          let minDistance = Infinity;
+
+          data.forEach(service => {
+            const serviceLocation = [service.longitude, service.latitude];
+            const distance = turf.distance(turf.point(userLocation), turf.point(serviceLocation), { units: 'kilometers' });
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearest = service;
+            }
+          });
+
+          if (nearest) {
+            new mapboxgl.Marker({ color: "red" })
+              .setLngLat([nearest.longitude, nearest.latitude])
+              .setPopup(new mapboxgl.Popup().setHTML(`
+                <h3>Nearest Service: ${nearest.name}</h3>
+                <p>Type: ${nearest.type}</p>
+                <p>Address: ${nearest.address}</p>
+                <p>Contact: ${nearest.contact_info}</p>
+                <p>Distance: ${minDistance.toFixed(2)} km</p>
+              `))
+              .addTo(map);
+          }
+        });
+    }, () => console.error('Unable to retrieve location'));
   </script>
 </body>
 </html>

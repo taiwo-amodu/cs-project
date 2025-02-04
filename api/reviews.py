@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import get_db_connection
+from api.db import get_db_connection
 
 reviews_bp = Blueprint('reviews', __name__)
 
