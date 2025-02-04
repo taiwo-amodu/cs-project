@@ -1,9 +1,16 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+DROP TABLE IF EXISTS reviews;
+
+DROP TABLE IF EXISTS emergency_services;
+
 CREATE TABLE emergency_services (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    latitude FLOAT NOT NULL,
-    longitude FLOAT NOT NULL,
-    address TEXT,
-    contact_info VARCHAR(100)
+   id SERIAL PRIMARY KEY,
+   name TEXT,
+   type TEXT,
+   latitude DOUBLE PRECISION,
+   longitude DOUBLE PRECISION,
+   address TEXT,
+   contact_info TEXT,
+   geometry GEOMETRY
 );
