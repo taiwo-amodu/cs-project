@@ -17,7 +17,7 @@ This project aims to help users locate the nearest emergency services (e.g., hos
 •	Overpass API or OSMnx for extracting OSM data
 •	Frontend (Optional): Adds-on
 •	A web framework like React or Vue.js to build a user-friendly interface.
-•	Integrating with a mapping library like Leaflet or Mapbox to display the results on a map.
+•	Integrating with a mapping library like Mapbox to display the results on a map.
 
 Example Use Case
 •	A user is in an unfamiliar area and needs to find the nearest hospital.
@@ -27,4 +27,10 @@ Example Use Case
 •	The app provides directions to the hospital using the shortest route.
 
 
+
+
+**Authors**
+James
+Justin
+Taiwo
 
