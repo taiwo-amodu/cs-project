@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from api.db import get_db_connection
+from .db import get_db_connection
 
 reviews_bp = Blueprint('reviews', __name__)
 
@@ -9,25 +9,39 @@ def add_review():
     data = request.json
     required_fields = ['service_id', 'user_name', 'rating', 'review']
 
-    if not all(field in data for field in required_fields) or not (1 <= data['rating'] <= 5):
-        return jsonify({"error": "Invalid input"}), 400
+    # Validate all required fields
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields: service_id, user_name, rating, review"}), 400
 
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
+    # Validate rating value
+    rating = data.get('rating')
+    if not isinstance(rating, int) or not (1 <= rating <= 5):
+        return jsonify({"error": "Rating must be an integer between 1 and 5"}), 400
+
+    # Validate service_id
+    service_id = data.get('service_id')
+    if not isinstance(service_id, int) or service_id <= 0:
+        return jsonify({"error": "Invalid service_id"}), 400
 
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO reviews (service_id, user_name, rating, review)
-                VALUES (%s, %s, %s, %s);
-            """, (data['service_id'], data['user_name'], data['rating'], data['review']))
-            conn.commit()
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if the emergency service exists
+                cur.execute("SELECT id FROM emergency_services WHERE id = %s", (service_id,))
+                service_exists = cur.fetchone()
+                if not service_exists:
+                    return jsonify({"error": "Service not found"}), 404
+
+                # Insert review into the database
+                cur.execute("""
+                    INSERT INTO reviews (service_id, user_name, rating, review)
+                    VALUES (%s, %s, %s, %s);
+                """, (service_id, data['user_name'], rating, data['review']))
+                conn.commit()
+
         return jsonify({"message": "Review added successfully"}), 201
     except Exception as e:
-        return jsonify({"error": f"Failed to add review: {e}"}), 500
-    finally:
-        conn.close()
+        return jsonify({"error": f"Failed to add review: {str(e)}"}), 500
 
 
 @reviews_bp.route('/api/reviews/<int:service_id>', methods=['GET'])
@@ -36,8 +50,8 @@ def get_reviews(service_id):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Fetch reviews
-                cur.execute("SELECT id, service_id, user_name, rating, review FROM reviews WHERE service_id = %s", (service_id,))
+                # Fetch reviews for the given service_id
+                cur.execute("SELECT id, service_id, user_name, rating, review, created_at FROM reviews WHERE service_id = %s", (service_id,))
                 columns = [desc[0] for desc in cur.description]  # Get column names
                 reviews = [dict(zip(columns, row)) for row in cur.fetchall()]  # Convert to JSON
 

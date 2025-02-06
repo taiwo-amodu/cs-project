@@ -47,18 +47,22 @@ def calculate_centroid(geometry):
         return None
 
     # Extract latitudes and longitudes from the geometry
-    lats = [point['lat'] for point in geometry]
-    lons = [point['lon'] for point in geometry]
-
-    # Calculate the average latitude and longitude
-    centroid_lat = sum(lats) / len(lats)
-    centroid_lon = sum(lons) / len(lons)
-    return {'lat': centroid_lat, 'lon': centroid_lon}
+    try:
+        lats = [point['lat'] for point in geometry if 'lat' in point]
+        lons = [point['lon'] for point in geometry if 'lon' in point]
+        if not lats or not lons:
+            return None
+        centroid_lat = sum(lats) / len(lats)
+        centroid_lon = sum(lons) / len(lons)
+        return {'lat': centroid_lat, 'lon': centroid_lon}
+    except Exception as e:
+        logger.warning(f"Error calculating centroid: {e}")
+        return None
 
 def transform_osm_data(data):
     """Transform OSM data into a list of dictionaries with relevant fields."""
     services = []
-    for element in data['elements']:
+    for element in data.get('elements', []):
         service = {
             'name': element.get('tags', {}).get('name', 'Unknown'),
             'type': element.get('tags', {}).get('amenity', 'Unknown'),
@@ -81,12 +85,13 @@ def transform_osm_data(data):
                 logger.warning(f"Skipping {element['type']} {element['id']} due to missing geometry.")
                 continue
 
-        services.append(service)
+        if 'latitude' in service and 'longitude' in service:
+            services.append(service)
 
     logger.info(f"Transformed {len(services)} records.")
     return services
 
-def load_data_to_db(services,table_name="emergency_services"):
+def load_data_to_db(services, table_name="emergency_services"):
     """Load transformed data into the PostgreSQL database."""
     # Fetch database credentials from environment variables
     dbname = os.getenv('DB_NAME', 'esl')
@@ -96,14 +101,18 @@ def load_data_to_db(services,table_name="emergency_services"):
     port = os.getenv('DB_PORT', '5432')
 
     try:
-        # Use a context manager for database connection
         with psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port) as conn:
             with conn.cursor() as cur:
-                # Use batch insertion for better performance
-                execute_values(cur, """
-                    INSERT INTO emergency_services (name, type, latitude, longitude, address, contact_info)
+                # Insert using PostGIS format for `location`
+                execute_values(cur, f"""
+                    INSERT INTO {table_name} (name, type, location, address, contact_info)
                     VALUES %s
-                """, [(s['name'], s['type'], s['latitude'], s['longitude'], s['address'], s['contact_info']) for s in services])
+                """, [
+                    (s['name'], s['type'], 
+                     f"SRID=4326;POINT({s['longitude']} {s['latitude']})", 
+                     s['address'], s['contact_info'])
+                    for s in services
+                ])
                 conn.commit()
         logger.info("Data loaded into the database successfully.")
     except psycopg2.Error as e:
@@ -111,7 +120,7 @@ def load_data_to_db(services,table_name="emergency_services"):
 
 if __name__ == "__main__":
     # Bounding box for Lisbon (south, west, north, east)
-    bbox = "38.70, -9.23, 38.80, -9.09"
+    bbox = "38.70,-9.23,38.80,-9.09"  # Fix formatting
     logger.info(f"Fetching data for Lisbon (Bounding Box: {bbox})...")
 
     # Extract data from OSM
