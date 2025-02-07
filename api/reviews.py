@@ -9,16 +9,16 @@ def add_review():
     data = request.json
     required_fields = ['service_id', 'user_name', 'rating', 'review']
 
-    # Validate all required fields
+    # Validating all required fields
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields: service_id, user_name, rating, review"}), 400
 
-    # Validate rating value
+    # Validating rating value
     rating = data.get('rating')
     if not isinstance(rating, int) or not (1 <= rating <= 5):
         return jsonify({"error": "Rating must be an integer between 1 and 5"}), 400
 
-    # Validate service_id
+    # Validating service_id
     service_id = data.get('service_id')
     if not isinstance(service_id, int) or service_id <= 0:
         return jsonify({"error": "Invalid service_id"}), 400

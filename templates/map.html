@@ -77,7 +77,7 @@
     let servicesData = [];
     let userLocation = null;
 
-    // Fetch and display all emergency services
+    // Fetching and displaying all emergency services
     function loadAllServices() {
       fetch('/api/services')
         .then(response => response.json())
@@ -94,7 +94,7 @@
             const lon = service.longitude;
             const lat = service.latitude;
 
-            // Add service markers to the map
+            // Adding service markers to the map
             const marker = new mapboxgl.Marker({ color: 'red' })
               .setLngLat([lon, lat])
               .setPopup(new mapboxgl.Popup().setHTML(`
@@ -107,7 +107,7 @@
 
             allMarkers.push(marker);
 
-            // Add service to dropdown list
+            // Adding service to dropdown list
             let option = document.createElement("option");
             option.value = service.id;
             option.textContent = `${service.name} - ${service.type}`;
@@ -117,7 +117,7 @@
         .catch(error => console.error("Error loading services:", error));
     }
 
-    // Get user location
+    // Getting user location
     function getUserLocation() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(success, error, { enableHighAccuracy: true });
@@ -144,7 +144,7 @@
       alert("Unable to retrieve your location.");
     }
 
-    // Route from user location to selected emergency service
+    // Routing from user location to selected emergency service
     function routeToService() {
       const selectedServiceId = document.getElementById("serviceList").value;
 
@@ -177,7 +177,7 @@
         .catch(error => console.error("Error fetching route:", error));
     }
 
-    // Draw route on Mapbox
+    // Drawing route on Mapbox
     function drawRoute(routeGeometry) {
       if (routeLayer) map.removeLayer('route');
       if (map.getSource('route')) map.removeSource('route');
@@ -209,7 +209,7 @@
       });
     }
 
-    // Decode OSRM polyline geometry
+    // Decoding OSRM polyline geometry
     function decodePolyline(str) {
       let index = 0, lat = 0, lng = 0, coordinates = [];
       while (index < str.length) {

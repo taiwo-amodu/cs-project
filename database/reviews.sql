@@ -1,4 +1,4 @@
--- Create reviews table
+-- Creating reviews table
 CREATE TABLE reviews (
     id SERIAL PRIMARY KEY,
     service_id INT NOT NULL REFERENCES emergency_services(id) ON DELETE CASCADE,
@@ -10,6 +10,3 @@ CREATE TABLE reviews (
 
 -- Index on `service_id` to improve lookup performance
 CREATE INDEX idx_reviews_service_id ON reviews(service_id);
-
--- Optional: Index on `rating` if frequent rating-based queries are expected
-CREATE INDEX idx_reviews_rating ON reviews(rating);

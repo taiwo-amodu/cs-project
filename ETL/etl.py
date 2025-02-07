@@ -46,7 +46,7 @@ def calculate_centroid(geometry):
     if not geometry:
         return None
 
-    # Extract latitudes and longitudes from the geometry
+    # Extracting latitudes and longitudes from the geometry
     try:
         lats = [point['lat'] for point in geometry if 'lat' in point]
         lons = [point['lon'] for point in geometry if 'lon' in point]
@@ -70,12 +70,12 @@ def transform_osm_data(data):
             'contact_info': element.get('tags', {}).get('phone', '')
         }
 
-        # Handle nodes
+        # Handling nodes
         if element['type'] == 'node':
             service['latitude'] = element.get('lat')
             service['longitude'] = element.get('lon')
 
-        # Handle ways and relations
+        # Handling ways and relations
         elif element['type'] in ['way', 'relation']:
             centroid = calculate_centroid(element.get('geometry', []))
             if centroid:
@@ -93,7 +93,7 @@ def transform_osm_data(data):
 
 def load_data_to_db(services, table_name="emergency_services"):
     """Load transformed data into the PostgreSQL database."""
-    # Fetch database credentials from environment variables
+    # Fetching database credentials from environment variables
     dbname = os.getenv('DB_NAME', 'esl')
     user = os.getenv('DB_USER', 'postgres')
     password = os.getenv('DB_PASSWORD', 'postgres')
@@ -103,7 +103,7 @@ def load_data_to_db(services, table_name="emergency_services"):
     try:
         with psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port) as conn:
             with conn.cursor() as cur:
-                # Insert using PostGIS format for `location`
+                # Inserting using PostGIS format for `location`
                 execute_values(cur, f"""
                     INSERT INTO {table_name} (name, type, location, address, contact_info)
                     VALUES %s
@@ -123,15 +123,15 @@ if __name__ == "__main__":
     bbox = "38.70,-9.23,38.80,-9.09"  # Fix formatting
     logger.info(f"Fetching data for Lisbon (Bounding Box: {bbox})...")
 
-    # Extract data from OSM
+    # Extracting data from OSM
     osm_data = extract_osm_data(bbox)
 
     if osm_data:
-        # Transform data
+        # Transforming data
         services = transform_osm_data(osm_data)
 
         if services:
-            # Load data into the database
+            # Loading data into the database
             load_data_to_db(services)
         else:
             logger.warning("No services found in the transformed data.")

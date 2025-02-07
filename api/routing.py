@@ -40,7 +40,7 @@ def get_nearest_service(user_lon, user_lat):
 def get_route_to_service():
     """Fetch the best route from the user's live location to the nearest emergency service."""
     try:
-        # Get user location from request
+        # Geting user location from request
         user_lon = request.args.get('longitude')
         user_lat = request.args.get('latitude')
 
@@ -52,13 +52,13 @@ def get_route_to_service():
         except ValueError:
             return jsonify({"error": "Latitude and Longitude must be valid numbers"}), 400
 
-        # Find the nearest emergency service
+        # Finding the nearest emergency service
         nearest_service = get_nearest_service(user_lon, user_lat)
 
         if not nearest_service:
             return jsonify({"error": "No emergency services found"}), 404
 
-        # Extract service location
+        # Extracting service location
         service_lon, service_lat = nearest_service["longitude"], nearest_service["latitude"]
 
         # OSRM Routing API request
@@ -71,7 +71,7 @@ def get_route_to_service():
         if "routes" not in data or not data["routes"]:
             return jsonify({"error": "No route found"}), 404
 
-        # Extract route details
+        # Extracting route details
         route = data["routes"][0]
 
         formatted_response = {

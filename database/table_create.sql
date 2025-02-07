@@ -1,7 +1,7 @@
--- Enable PostGIS extension
+-- Enabling PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- Create emergency_services table
+-- Creating emergency_services table
 CREATE TABLE emergency_services (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -11,5 +11,5 @@ CREATE TABLE emergency_services (
     contact_info VARCHAR(150)
 );
 
--- Create an index on the spatial column for optimized spatial queries
+-- Creating an index on the spatial column for optimized spatial queries
 CREATE INDEX emergency_services_location_idx ON emergency_services USING GIST (location);

@@ -33,12 +33,12 @@ def add_service():
     data = request.json
     required_fields = ['name', 'type', 'latitude', 'longitude', 'address', 'contact_info']
 
-    # Validate required fields
+    # Validating required fields
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        # Validate latitude & longitude
+        # Validating latitude & longitude
         lat, lon = float(data['latitude']), float(data['longitude'])
     except ValueError:
         return jsonify({"error": "Latitude and Longitude must be valid numbers"}), 400
@@ -46,7 +46,7 @@ def add_service():
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Insert location as PostGIS GEOGRAPHY(POINT, 4326)
+                # Inserting location as PostGIS GEOGRAPHY(POINT, 4326)
                 cur.execute("""
                     INSERT INTO emergency_services (name, type, location, address, contact_info)
                     VALUES (%s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s);
@@ -65,14 +65,14 @@ def delete_service(service_id):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Check if the service exists
+                # Checking if the service exists
                 cur.execute("SELECT * FROM emergency_services WHERE id = %s", (service_id,))
                 service = cur.fetchone()
                 
                 if not service:
                     return jsonify({"error": "Service not found"}), 404
 
-                # Delete the service
+                # Deleting the service
                 cur.execute("DELETE FROM emergency_services WHERE id = %s", (service_id,))
                 conn.commit()
 
