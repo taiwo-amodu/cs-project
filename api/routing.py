@@ -1,8 +1,14 @@
 import requests
+import logging
 from flask import Blueprint, request, jsonify
 from .db import get_db_connection
 
+# Blueprint definition
 routing_bp = Blueprint('routing', __name__)
+
+logging.basicConfig(level=logging.INFO)
+
+GOOGLE_MAPS_API_KEY = "AIzaSyB5EtA8BBoob6ou6xxQRhqsel918v3-6JI"
 
 def get_nearest_service(user_lon, user_lat):
     """Find the nearest emergency service using PostGIS."""
@@ -32,15 +38,64 @@ def get_nearest_service(user_lon, user_lat):
                         "distance_meters": result[7]
                     }
                 else:
+                    logging.info("No emergency services found nearby.")
                     return None
     except Exception as e:
+        logging.error(f"Database query error: {e}")
+        return None
+
+def get_route_from_google(user_lon, user_lat, service_lon, service_lat):
+    """Fetches route from Google Maps Directions API."""
+    google_url = f"https://maps.googleapis.com/maps/api/directions/json"
+
+    params = {
+        "origin": f"{user_lat},{user_lon}",
+        "destination": f"{service_lat},{service_lon}",
+        "mode": "driving",  # Other modes: walking, bicycling, transit
+        "key": GOOGLE_MAPS_API_KEY
+    }
+
+    try:
+        response = requests.get(google_url, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if "routes" not in data or not data["routes"]:
+            return None
+
+        # Extracting route details
+        route = data["routes"][0]
+        legs = route["legs"][0]
+
+        formatted_route = {
+            "distance_meters": legs["distance"]["value"],
+            "duration_seconds": legs["duration"]["value"],
+            "start_address": legs["start_address"],
+            "end_address": legs["end_address"],
+            "steps": [
+                {
+                    "instruction": step["html_instructions"],
+                    "distance_meters": step["distance"]["value"],
+                    "duration_seconds": step["duration"]["value"],
+                    "start_location": step["start_location"],
+                    "end_location": step["end_location"]
+                }
+                for step in legs["steps"]
+            ],
+            "polyline": route["overview_polyline"]["points"]
+        }
+
+        return formatted_route
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Google Maps API request error: {e}")
         return None
 
 @routing_bp.route('/api/route-to-service', methods=['GET'])
 def get_route_to_service():
-    """Fetch the best route from the user's live location to the nearest emergency service."""
+    """Fetch the best route from Google Maps API from user to nearest emergency service."""
     try:
-        # Geting user location from request
+        # Get user location from request
         user_lon = request.args.get('longitude')
         user_lat = request.args.get('latitude')
 
@@ -61,40 +116,21 @@ def get_route_to_service():
         # Extracting service location
         service_lon, service_lat = nearest_service["longitude"], nearest_service["latitude"]
 
-        # OSRM Routing API request
-        osrm_url = f"http://router.project-osrm.org/route/v1/driving/{user_lon},{user_lat};{service_lon},{service_lat}?overview=full&steps=true"
-        response = requests.get(osrm_url)
-        response.raise_for_status()
+        # Fetch route from Google Maps API
+        route = get_route_from_google(user_lon, user_lat, service_lon, service_lat)
 
-        data = response.json()
-
-        if "routes" not in data or not data["routes"]:
+        if not route:
             return jsonify({"error": "No route found"}), 404
-
-        # Extracting route details
-        route = data["routes"][0]
 
         formatted_response = {
             "message": "Route fetched successfully",
             "user_location": {"longitude": user_lon, "latitude": user_lat},
             "nearest_service": nearest_service,
-            "route": {
-                "distance_meters": route["distance"],
-                "duration_seconds": route["duration"],
-                "geometry": route["geometry"],
-                "steps": [
-                    {
-                        "instruction": step["maneuver"].get("instruction", "No instruction available"),
-                        "location": step["maneuver"]["location"],
-                        "duration": step["duration"],
-                        "distance": step["distance"]
-                    }
-                    for leg in route["legs"] for step in leg.get("steps", [])
-                ]
-            }
+            "route": route
         }
 
         return jsonify(formatted_response), 200
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to fetch route: {str(e)}"}), 500
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        return jsonify({"error": "Internal server error"}), 500
