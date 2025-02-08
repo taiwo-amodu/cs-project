@@ -95,7 +95,7 @@ def get_route_from_google(user_lon, user_lat, service_lon, service_lat):
 def get_route_to_service():
     """Fetch the best route from Google Maps API from user to nearest emergency service."""
     try:
-        # Get user location from request
+        # Getting user location from request
         user_lon = request.args.get('longitude')
         user_lat = request.args.get('latitude')
 
@@ -116,7 +116,7 @@ def get_route_to_service():
         # Extracting service location
         service_lon, service_lat = nearest_service["longitude"], nearest_service["latitude"]
 
-        # Fetch route from Google Maps API
+        # Fetching route from Google Maps API
         route = get_route_from_google(user_lon, user_lat, service_lon, service_lat)
 
         if not route:
