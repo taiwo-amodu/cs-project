@@ -4,12 +4,12 @@ from psycopg2.extras import execute_values
 import os
 import logging
 
-# Configure logging
+# Configuring logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def extract_osm_data(bbox):
-    """Fetch emergency services data from OpenStreetMap using the Overpass API for a bounding box."""
+    """Fetching emergency services data from OpenStreetMap using the Overpass API for a bounding box."""
     overpass_url = "http://overpass-api.de/api/interpreter"
     query = f"""
     [out:json];
@@ -60,7 +60,7 @@ def calculate_centroid(geometry):
         return None
 
 def transform_osm_data(data):
-    """Transform OSM data into a list of dictionaries with relevant fields."""
+    """Transforming OSM data into a list of dictionaries with relevant fields."""
     services = []
     for element in data.get('elements', []):
         service = {
@@ -92,7 +92,7 @@ def transform_osm_data(data):
     return services
 
 def load_data_to_db(services, table_name="emergency_services"):
-    """Load transformed data into the PostgreSQL database."""
+    """Loading transformed data into the PostgreSQL database."""
     # Fetching database credentials from environment variables
     dbname = os.getenv('DB_NAME', 'esl')
     user = os.getenv('DB_USER', 'postgres')
@@ -120,7 +120,7 @@ def load_data_to_db(services, table_name="emergency_services"):
 
 if __name__ == "__main__":
     # Bounding box for Lisbon (south, west, north, east)
-    bbox = "38.70,-9.23,38.80,-9.09"  # Fix formatting
+    bbox = "38.70,-9.23,38.80,-9.09"
     logger.info(f"Fetching data for Lisbon (Bounding Box: {bbox})...")
 
     # Extracting data from OSM

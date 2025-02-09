@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 GOOGLE_MAPS_API_KEY = "AIzaSyB5EtA8BBoob6ou6xxQRhqsel918v3-6JI"
 
 def get_nearest_service(user_lon, user_lat):
-    """Find the nearest emergency service using PostGIS."""
+    """Finding the nearest emergency service using PostGIS."""
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -45,7 +45,7 @@ def get_nearest_service(user_lon, user_lat):
         return None
 
 def get_route_from_google(user_lon, user_lat, service_lon, service_lat):
-    """Fetches route from Google Maps Directions API."""
+    """Fetching route from Google Maps Directions API."""
     google_url = f"https://maps.googleapis.com/maps/api/directions/json"
 
     params = {
@@ -93,7 +93,7 @@ def get_route_from_google(user_lon, user_lat, service_lon, service_lat):
 
 @routing_bp.route('/api/route-to-service', methods=['GET'])
 def get_route_to_service():
-    """Fetch the best route from Google Maps API from user to nearest emergency service."""
+    """Fetching the best route from Google Maps API from user to nearest emergency service."""
     try:
         # Getting user location from request
         user_lon = request.args.get('longitude')
