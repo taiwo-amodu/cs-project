@@ -23,6 +23,9 @@ def add_review():
     if not isinstance(service_id, int) or service_id <= 0:
         return jsonify({"error": "Invalid service_id"}), 400
 
+    #sql query to insert review
+    sql = """INSERT INTO reviews (service_id,user_name,rating,review) VALUES (%s,%s,%s,%s);"""
+
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -33,11 +36,9 @@ def add_review():
                     return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
-                cur.execute("""
-                    INSERT INTO reviews (service_id, user_name, rating, review)
-                    VALUES (%s, %s, %s, %s);
-                """, (service_id, data['user_name'], rating, data['review']))
+                cur.execute(sql, (data['service_id'], data['user_name'], data['rating'], data['review']))
                 conn.commit()
+                cur.close()
 
         return jsonify({"message": "Review added successfully"}), 201
     except Exception as e:
