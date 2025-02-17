@@ -45,14 +45,17 @@ def add_review():
         return jsonify({"error": f"Failed to add review: {str(e)}"}), 500
 
 
-@reviews_bp.route('/api/reviews/<int:service_id>', methods=['GET'])
-def get_reviews(service_id):
+@reviews_bp.route('/api/get_review', methods=['GET'])
+def get_reviews():
     """Fetch reviews for a specific service."""
+    #data=[25]
+    sql = """SELECT rating, review FROM reviews WHERE service_id=%s"""
+    data=request.json
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Fetch reviews for the given service_id
-                cur.execute("SELECT id, service_id, user_name, rating, review, created_at FROM reviews WHERE service_id = %s", (service_id,))
+                cur.execute(sql,(data['service_id']))
                 columns = [desc[0] for desc in cur.description]  # Get column names
                 reviews = [dict(zip(columns, row)) for row in cur.fetchall()]  # Convert to JSON
 
