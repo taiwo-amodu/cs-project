@@ -64,7 +64,7 @@
     <button onclick="getUserLocation()">Find My Location</button>
     <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)">
     <button onclick="searchNearbyServices()">Search Nearby</button>
-    <p id="status"></p>
+    <p id="status"></p><br><br>
     <label for="userReview">Write a Review:</label>        
     <form action="{{url_for('reviews.add_review')}}" method="POST">
         <input type="text" name="user_name" placeholder="Your Name">
