@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 from flask import Blueprint, request, jsonify
@@ -8,7 +9,7 @@ routing_bp = Blueprint('routing', __name__)
 
 logging.basicConfig(level=logging.INFO)
 
-GOOGLE_MAPS_API_KEY = "AIzaSyB5EtA8BBoob6ou6xxQRhqsel918v3-6JI"
+api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 def get_nearest_service(user_lon, user_lat):
     """Finding the nearest emergency service using PostGIS."""
@@ -52,7 +53,7 @@ def get_route_from_google(user_lon, user_lat, service_lon, service_lat):
         "origin": f"{user_lat},{user_lon}",
         "destination": f"{service_lat},{service_lon}",
         "mode": "driving",  # Other modes: walking, bicycling, transit
-        "key": GOOGLE_MAPS_API_KEY
+        "key": api_key
     }
 
     try:

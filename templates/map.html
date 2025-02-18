@@ -5,13 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Emergency Services Navigation</title>
 
-  <!-- Google Maps API -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5EtA8BBoob6ou6xxQRhqsel918v3-6JI&libraries=places"></script>
+  <!-- Loading Google Maps API Key Securely -->
+  <script>
+    async function loadGoogleMaps() {
+      try {
+        const response = await fetch('/api/google-maps-key');
+        const data = await response.json();
+        if (!data.api_key) throw new Error("API key not found");
+
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.api_key}&libraries=places&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error("Failed to load Google Maps API key:", error);
+        document.getElementById("status").innerText = "Error loading map.";
+      }
+    }
+    loadGoogleMaps();
+  </script>
 
   <style>
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
     #map { width: 100%; height: 100vh; }
-
     .controls {
       position: absolute;
       top: 10px;
@@ -23,14 +40,12 @@
       z-index: 1000;
       width: 270px;
     }
-
     select, button {
       width: 100%;
       margin-top: 5px;
       padding: 8px;
       font-size: 14px;
     }
-
     button {
       background: #007bff;
       color: white;
@@ -38,9 +53,8 @@
       cursor: pointer;
       border-radius: 4px;
     }
-
     button:hover { background: #0056b3; }
-
+    #status { margin-top: 10px; color: red; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -48,10 +62,11 @@
   <!-- Controls -->
   <div class="controls">
     <button onclick="getUserLocation()">Find My Location</button>
-    <select id="serviceList">
+    <select id="serviceList" onchange="updateSelectedService()">
       <option value="">Select a Service</option>
     </select>
     <button onclick="routeToService()">Navigate to Service</button>
+    <p id="status"></p>
   </div>
 
   <!-- Google Map -->
@@ -61,8 +76,8 @@
     let map, userMarker, destinationMarker, directionsService, directionsRenderer;
     let servicesData = [];
     let userLocation = null;
-    let durationInfoWindow;
     let selectedServiceId = null;
+    let durationInfoWindow;
 
     function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -78,47 +93,50 @@
         loadAllServices();
     }
 
-    function loadAllServices() {
-        fetch('/api/services')
-            .then(response => response.json())
-            .then(data => {
-                if (!data.length) {
-                    alert("No emergency services found!");
-                    return;
-                }
+    async function loadAllServices() {
+        try {
+            const response = await fetch('/api/services');
+            const data = await response.json();
+            if (!data.length) {
+                document.getElementById("status").innerText = "No emergency services found!";
+                return;
+            }
 
-                servicesData = data;
-                const serviceList = document.getElementById("serviceList");
+            servicesData = data;
+            const serviceList = document.getElementById("serviceList");
 
-                data.forEach(service => {
-                    const { longitude, latitude, name, type, address, contact_info, id } = service;
+            data.forEach(service => {
+                const { longitude, latitude, name, type, address, contact_info, id } = service;
 
-                    const marker = new google.maps.Marker({
-                        position: { lat: latitude, lng: longitude },
-                        map: map,
-                        title: name,
-                        icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-                    });
-
-                    marker.addListener("click", () => {
-                        selectedServiceId = id;
-                        serviceList.value = id;  // Auto-select service in dropdown
-                    });
-
-                    let option = document.createElement("option");
-                    option.value = id;
-                    option.textContent = `${name} - ${type}`;
-                    serviceList.appendChild(option);
+                const marker = new google.maps.Marker({
+                    position: { lat: latitude, lng: longitude },
+                    map: map,
+                    title: name,
+                    icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
                 });
-            })
-            .catch(error => console.error("Error loading services:", error));
+
+                marker.addListener("click", () => {
+                    selectedServiceId = id;
+                    serviceList.value = id;  // Auto-select service in dropdown
+                    showServiceDetails(name, address, contact_info);
+                });
+
+                let option = document.createElement("option");
+                option.value = id;
+                option.textContent = `${name} - ${type}`;
+                serviceList.appendChild(option);
+            });
+        } catch (error) {
+            document.getElementById("status").innerText = "Error loading services.";
+            console.error("Error loading services:", error);
+        }
     }
 
     function getUserLocation() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(success, error, { enableHighAccuracy: true });
         } else {
-            alert("Geolocation is not supported by this browser.");
+            document.getElementById("status").innerText = "Geolocation not supported.";
         }
     }
 
@@ -138,23 +156,27 @@
     }
 
     function error() {
-        alert("Unable to retrieve your location.");
+        document.getElementById("status").innerText = "Unable to retrieve your location.";
+    }
+
+    function updateSelectedService() {
+        selectedServiceId = document.getElementById("serviceList").value;
     }
 
     function routeToService() {
         if (!selectedServiceId) {
-            alert("Please select a service to navigate to.");
+            document.getElementById("status").innerText = "Please select a service.";
             return;
         }
 
         if (!userLocation) {
-            alert("Please allow location access and try again.");
+            document.getElementById("status").innerText = "Enable location access.";
             return;
         }
 
         const service = servicesData.find(s => s.id == selectedServiceId);
         if (!service) {
-            alert("Invalid service selected.");
+            document.getElementById("status").innerText = "Invalid service selected.";
             return;
         }
 
@@ -181,15 +203,13 @@
                     icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
                 });
 
-                durationInfoWindow.setContent(`<b>Estimated Time:</b> ${routeDuration}`);
+                durationInfoWindow.setContent(`<b>${service.name}</b><br>Estimated Time: ${routeDuration}`);
                 durationInfoWindow.open(map, destinationMarker);
             } else {
-                alert("Could not find a route.");
+                document.getElementById("status").innerText = "Could not find a route.";
             }
         });
     }
-
-    window.onload = initMap;
   </script>
 
 </body>
