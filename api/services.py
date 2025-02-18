@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from .db import get_db_connection
+from geopy.distance import geodesic
 
 services_bp = Blueprint('services', __name__)
 
@@ -79,3 +80,59 @@ def delete_service(service_id):
         return jsonify({"message": f"Service with ID {service_id} deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to delete service: {str(e)}"}), 500
+
+@services_bp.route('/api/search-services', methods=['GET'])
+def search_services():
+    """Find services by type and within a given radius using GEOMETRY."""
+    service_type = request.args.get('type')
+    user_lat = request.args.get('lat')
+    user_lng = request.args.get('lng')
+    radius_km = request.args.get('radius', 2)  # Default 2km
+
+    if not service_type or not user_lat or not user_lng:
+        return jsonify({"error": "Missing parameters (type, lat, lng)"}), 400
+
+    try:
+        user_lat, user_lng = float(user_lat), float(user_lng)
+        radius_m = float(radius_km) * 1000  # Convert km to meters
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Query using ST_DWithin to find services within radius
+        cur.execute("""
+            SELECT 
+                id, 
+                name, 
+                type, 
+                address, 
+                contact_info, 
+                ST_AsText(location) AS location
+            FROM emergency_services 
+            WHERE type = %s
+            AND ST_DWithin(
+                location, 
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326), 
+                %s
+            );
+        """, (service_type, user_lng, user_lat, radius_m))
+
+        services = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Convert results into JSON format
+        nearby_services = []
+        for s in services:
+            geo_point = s[5].replace("POINT(", "").replace(")", "").split()
+            service_lng, service_lat = map(float, geo_point)
+
+            nearby_services.append({
+                "id": s[0], "name": s[1], "type": s[2], "address": s[3], "contact_info": s[4],
+                "latitude": service_lat, "longitude": service_lng
+            })
+
+        return jsonify(nearby_services)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

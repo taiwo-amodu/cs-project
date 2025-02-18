@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Emergency Services Navigation</title>
+  <title>Find Nearby Services</title>
 
-  <!-- Loading Google Maps API Key Securely -->
+  <!-- Securely Load Google Maps API -->
   <script>
     async function loadGoogleMaps() {
       try {
@@ -14,7 +14,7 @@
         if (!data.api_key) throw new Error("API key not found");
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.api_key}&libraries=places&callback=initMap`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.api_key}&libraries=places,directions&callback=initMap`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
@@ -38,9 +38,9 @@
       border-radius: 5px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       z-index: 1000;
-      width: 270px;
+      width: 300px;
     }
-    select, button {
+    input, button {
       width: 100%;
       margin-top: 5px;
       padding: 8px;
@@ -62,10 +62,8 @@
   <!-- Controls -->
   <div class="controls">
     <button onclick="getUserLocation()">Find My Location</button>
-    <select id="serviceList" onchange="updateSelectedService()">
-      <option value="">Select a Service</option>
-    </select>
-    <button onclick="routeToService()">Navigate to Service</button>
+    <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)">
+    <button onclick="searchNearbyServices()">Search Nearby</button>
     <p id="status"></p>
   </div>
 
@@ -73,11 +71,9 @@
   <div id="map"></div>
 
   <script>
-    let map, userMarker, destinationMarker, directionsService, directionsRenderer;
-    let servicesData = [];
+    let map, userMarker, infoWindow, serviceMarkers = [];
+    let directionsService, directionsRenderer;
     let userLocation = null;
-    let selectedServiceId = null;
-    let durationInfoWindow;
 
     function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -85,51 +81,10 @@
             zoom: 12
         });
 
+        infoWindow = new google.maps.InfoWindow();
         directionsService = new google.maps.DirectionsService();
-        directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
         directionsRenderer.setMap(map);
-
-        durationInfoWindow = new google.maps.InfoWindow();
-        loadAllServices();
-    }
-
-    async function loadAllServices() {
-        try {
-            const response = await fetch('/api/services');
-            const data = await response.json();
-            if (!data.length) {
-                document.getElementById("status").innerText = "No emergency services found!";
-                return;
-            }
-
-            servicesData = data;
-            const serviceList = document.getElementById("serviceList");
-
-            data.forEach(service => {
-                const { longitude, latitude, name, type, address, contact_info, id } = service;
-
-                const marker = new google.maps.Marker({
-                    position: { lat: latitude, lng: longitude },
-                    map: map,
-                    title: name,
-                    icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-                });
-
-                marker.addListener("click", () => {
-                    selectedServiceId = id;
-                    serviceList.value = id;  // Auto-select service in dropdown
-                    showServiceDetails(name, address, contact_info);
-                });
-
-                let option = document.createElement("option");
-                option.value = id;
-                option.textContent = `${name} - ${type}`;
-                serviceList.appendChild(option);
-            });
-        } catch (error) {
-            document.getElementById("status").innerText = "Error loading services.";
-            console.error("Error loading services:", error);
-        }
     }
 
     function getUserLocation() {
@@ -153,40 +108,76 @@
 
         map.setCenter(userLocation);
         map.setZoom(14);
+        document.getElementById("status").innerText = "Location found!";
     }
 
     function error() {
         document.getElementById("status").innerText = "Unable to retrieve your location.";
     }
 
-    function updateSelectedService() {
-        selectedServiceId = document.getElementById("serviceList").value;
-    }
-
-    function routeToService() {
-        if (!selectedServiceId) {
-            document.getElementById("status").innerText = "Please select a service.";
+    async function searchNearbyServices() {
+        const searchType = document.getElementById("searchService").value.trim().toLowerCase();
+        if (!searchType) {
+            document.getElementById("status").innerText = "Enter a service type!";
             return;
         }
 
         if (!userLocation) {
-            document.getElementById("status").innerText = "Enable location access.";
+            document.getElementById("status").innerText = "Find your location first.";
             return;
         }
 
-        const service = servicesData.find(s => s.id == selectedServiceId);
-        if (!service) {
-            document.getElementById("status").innerText = "Invalid service selected.";
-            return;
-        }
+        const userLat = userLocation.lat;
+        const userLng = userLocation.lng;
+        const radius = 2; // 1km search radius
 
-        getGoogleMapsRoute(userLocation, { lat: service.latitude, lng: service.longitude }, service);
+        try {
+            const response = await fetch(`/api/search-services?type=${searchType}&lat=${userLat}&lng=${userLng}&radius=${radius}`);
+            const data = await response.json();
+
+            if (!data.length) {
+                document.getElementById("status").innerText = "No services found nearby.";
+                return;
+            }
+
+            // Remove old markers
+            serviceMarkers.forEach(marker => marker.setMap(null));
+            serviceMarkers = [];
+
+            // Display new markers
+            data.forEach(service => {
+                const { latitude, longitude, name, type, address, contact_info } = service;
+
+                const marker = new google.maps.Marker({
+                    position: { lat: latitude, lng: longitude },
+                    map: map,
+                    title: name,
+                    icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                });
+
+                marker.addListener("click", () => {
+                    routeToService({ lat: latitude, lng: longitude }, name, type, address, contact_info);
+                });
+
+                serviceMarkers.push(marker);
+            });
+
+            document.getElementById("status").innerText = `Found ${data.length} nearby ${searchType}(s).`;
+        } catch (error) {
+            document.getElementById("status").innerText = "Error fetching services.";
+            console.error("Error:", error);
+        }
     }
 
-    function getGoogleMapsRoute(start, end, service) {
+    function routeToService(destination, name, type, address, contact_info) {
+        if (!userLocation) {
+            document.getElementById("status").innerText = "Please enable location access.";
+            return;
+        }
+
         const request = {
-            origin: start,
-            destination: end,
+            origin: userLocation,
+            destination: destination,
             travelMode: google.maps.TravelMode.DRIVING
         };
 
@@ -195,18 +186,21 @@
                 directionsRenderer.setDirections(result);
                 let routeDuration = result.routes[0].legs[0].duration.text;
 
-                if (destinationMarker) destinationMarker.setMap(null);
-                destinationMarker = new google.maps.Marker({
-                    position: end,
-                    map: map,
-                    title: service.name,
-                    icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                });
+                const infoContent = `
+                    <div>
+                        <h3>${name}</h3>
+                        <p><b>Type:</b> ${type}</p>
+                        <p><b>Address:</b> ${address}</p>
+                        <p><b>Contact:</b> ${contact_info}</p>
+                        <p><b>Estimated Time:</b> ${routeDuration}</p>
+                    </div>
+                `;
 
-                durationInfoWindow.setContent(`<b>${service.name}</b><br>Estimated Time: ${routeDuration}`);
-                durationInfoWindow.open(map, destinationMarker);
+                infoWindow.setContent(infoContent);
+                infoWindow.setPosition(destination);
+                infoWindow.open(map);
             } else {
-                document.getElementById("status").innerText = "Could not find a route.";
+                alert("Could not calculate route.");
             }
         });
     }
