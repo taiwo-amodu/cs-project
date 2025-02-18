@@ -29,10 +29,10 @@ def add_review():
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Check if the emergency service exists
-                cur.execute("SELECT id FROM emergency_services WHERE id = %s", (service_id,))
-                service_exists = cur.fetchone()
-                if not service_exists:
-                    return jsonify({"error": "Service not found"}), 404
+                #cur.execute("SELECT id FROM emergency_services WHERE id = %s", (service_id,))
+                #service_exists = cur.fetchone()
+                #if not service_exists:
+                #    return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
                 #33 is a service_id placeholder
