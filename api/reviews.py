@@ -6,22 +6,20 @@ reviews_bp = Blueprint('reviews', __name__)
 @reviews_bp.route('/api/add-review', methods=['POST'])
 def add_review():
     """Add a review for an emergency service."""
-    data = request.json
-    required_fields = ['service_id', 'user_name', 'rating', 'review']
+    user=request.form['user_name']
+    rating=request.form['rating']
+    review=request.form['review']
+    #data = request.json
+    #required_fields = ['service_id', 'user_name', 'rating', 'review']
 
     # Validating all required fields
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields: service_id, user_name, rating, review"}), 400
-
-    # Validating rating value
-    rating = data.get('rating')
-    if not isinstance(rating, int) or not (1 <= rating <= 5):
-        return jsonify({"error": "Rating must be an integer between 1 and 5"}), 400
+    #if not all(field in data for field in required_fields):
+        #return jsonify({"error": "Missing required fields: service_id, user_name, rating, review"}), 400
 
     # Validating service_id
-    service_id = data.get('service_id')
-    if not isinstance(service_id, int) or service_id <= 0:
-        return jsonify({"error": "Invalid service_id"}), 400
+    #service_id = data.get('service_id')
+    #if not isinstance(service_id, int) or service_id <= 0:
+    #    return jsonify({"error": "Invalid service_id"}), 400
 
     #sql query to insert review
     sql = """INSERT INTO reviews (service_id,user_name,rating,review) VALUES (%s,%s,%s,%s);"""
@@ -36,7 +34,8 @@ def add_review():
                     return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
-                cur.execute(sql, (data['service_id'], data['user_name'], data['rating'], data['review']))
+                #33 is a service_id placeholder
+                cur.execute(sql, (33, user,rating,review))
                 conn.commit()
                 cur.close()
 
