@@ -10,11 +10,12 @@ def add_review():
     rating=request.form['rating']
     review=request.form['review']
     #data = request.json
-    #required_fields = ['service_id', 'user_name', 'rating', 'review']
+    required_fields = [33,user,rating,review]
 
     # Validating all required fields
-    #if not all(field in data for field in required_fields):
-        #return jsonify({"error": "Missing required fields: service_id, user_name, rating, review"}), 400
+    for head in required_fields:
+        if not head:
+            return jsonify({"error": "Missing required field"}), 400
 
     # Validating service_id
     #service_id = data.get('service_id')
