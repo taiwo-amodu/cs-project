@@ -23,6 +23,9 @@ def add_review():
     if not isinstance(service_id, int) or service_id <= 0:
         return jsonify({"error": "Invalid service_id"}), 400
 
+    #sql query to insert review
+    sql = """INSERT INTO reviews (service_id,user_name,rating,review) VALUES (%s,%s,%s,%s);"""
+
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -33,25 +36,26 @@ def add_review():
                     return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
-                cur.execute("""
-                    INSERT INTO reviews (service_id, user_name, rating, review)
-                    VALUES (%s, %s, %s, %s);
-                """, (service_id, data['user_name'], rating, data['review']))
+                cur.execute(sql, (data['service_id'], data['user_name'], data['rating'], data['review']))
                 conn.commit()
+                cur.close()
 
         return jsonify({"message": "Review added successfully"}), 201
     except Exception as e:
         return jsonify({"error": f"Failed to add review: {str(e)}"}), 500
 
 
-@reviews_bp.route('/api/reviews/<int:service_id>', methods=['GET'])
-def get_reviews(service_id):
+@reviews_bp.route('/api/get_review', methods=['GET'])
+def get_reviews():
     """Fetch reviews for a specific service."""
+    #data=[25]
+    sql = """SELECT rating, review FROM reviews WHERE service_id=%s"""
+    data=request.json
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Fetch reviews for the given service_id
-                cur.execute("SELECT id, service_id, user_name, rating, review, created_at FROM reviews WHERE service_id = %s", (service_id,))
+                cur.execute(sql,(data['service_id']))
                 columns = [desc[0] for desc in cur.description]  # Get column names
                 reviews = [dict(zip(columns, row)) for row in cur.fetchall()]  # Convert to JSON
 
