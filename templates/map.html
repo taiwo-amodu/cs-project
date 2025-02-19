@@ -146,7 +146,7 @@
 
             // Display new markers
             data.forEach(service => {
-                const { latitude, longitude, name, type, address, contact_info } = service;
+                const { latitude, longitude, id, name, type, address, contact_info } = service;
 
                 const marker = new google.maps.Marker({
                     position: { lat: latitude, lng: longitude },
@@ -156,7 +156,7 @@
                 });
 
                 marker.addListener("click", () => {
-                    routeToService({ lat: latitude, lng: longitude }, name, type, address, contact_info);
+                    routeToService({ lat: latitude, lng: longitude }, id, name, type, address, contact_info);
                 });
 
                 serviceMarkers.push(marker);
@@ -169,7 +169,7 @@
         }
     }
 
-    function routeToService(destination, name, type, address, contact_info) {
+    function routeToService(destination, id, name, type, address, contact_info) {
         if (!userLocation) {
             document.getElementById("status").innerText = "Please enable location access.";
             return;
@@ -195,6 +195,7 @@
                         <p><b>Estimated Time:</b> ${routeDuration}</p>
                         <label for="userReview">Write a Review:</label>        
                         <form action="{{url_for('reviews.add_review')}}" method="POST">
+                            <input type="hidden" name="service_id" value=${id}>
                             <input type="text" name="user_name" placeholder="Your Name">
                             <input type="number" name="rating" min="1" max="5">
                             <input type="text" name="review" placeholder="Review">

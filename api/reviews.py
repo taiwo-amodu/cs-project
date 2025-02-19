@@ -6,11 +6,12 @@ reviews_bp = Blueprint('reviews', __name__)
 @reviews_bp.route('/api/add-review', methods=['POST'])
 def add_review():
     """Add a review for an emergency service."""
+    service_id=request.form['service_id']
     user=request.form['user_name']
     rating=request.form['rating']
     review=request.form['review']
     #data = request.json
-    required_fields = [33,user,rating,review]
+    required_fields = [service_id,user,rating,review]
 
     # Validating all required fields
     for head in required_fields:
@@ -35,8 +36,7 @@ def add_review():
                 #    return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
-                #33 is a service_id placeholder
-                cur.execute(sql, (33, user,rating,review))
+                cur.execute(sql, (service_id, user,rating,review))
                 conn.commit()
                 cur.close()
 
