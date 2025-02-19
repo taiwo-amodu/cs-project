@@ -64,14 +64,7 @@
     <button onclick="getUserLocation()">Find My Location</button>
     <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)">
     <button onclick="searchNearbyServices()">Search Nearby</button>
-    <p id="status"></p><br><br>
-    <label for="userReview">Write a Review:</label>        
-    <form action="{{url_for('reviews.add_review')}}" method="POST">
-        <input type="text" name="user_name" placeholder="Your Name">
-        <input type="number" name="rating" min="1" max="5">
-        <input type="text" name="review" placeholder="Review">
-        <input type="submit" value="Submit Review">
-    </form>
+    <p id="status"></p>
   </div>
 
   <!-- Google Map -->
@@ -200,6 +193,13 @@
                         <p><b>Address:</b> ${address}</p>
                         <p><b>Contact:</b> ${contact_info}</p>
                         <p><b>Estimated Time:</b> ${routeDuration}</p>
+                        <label for="userReview">Write a Review:</label>        
+                        <form action="{{url_for('reviews.add_review')}}" method="POST">
+                            <input type="text" name="user_name" placeholder="Your Name">
+                            <input type="number" name="rating" min="1" max="5">
+                            <input type="text" name="review" placeholder="Review">
+                            <input type="submit" value="Submit Review">
+                        </form>
                     </div>
                 `;
 
