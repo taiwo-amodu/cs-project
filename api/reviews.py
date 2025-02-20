@@ -48,8 +48,7 @@ def add_review():
 @reviews_bp.route('/api/get_review', methods=['GET'])
 def get_reviews():
     """Fetch reviews for a specific service."""
-    #data=[25]
-    sql = """SELECT rating, review FROM reviews WHERE service_id=%s"""
+    sql = """SELECT user_name, rating, review FROM reviews WHERE service_id=%s"""
     data=request.json
     try:
         with get_db_connection() as conn:
