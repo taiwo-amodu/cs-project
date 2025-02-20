@@ -43,6 +43,7 @@
     input, button {
       width: 100%;
       margin-top: 5px;
+      margin-bottom: 5px;
       padding: 8px;
       font-size: 14px;
     }
@@ -62,7 +63,12 @@
   <!-- Controls -->
   <div class="controls">
     <button onclick="getUserLocation()">Find My Location</button>
-    <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)" style="width:280px">
+    <select id="searchService">
+        <option value="choose"> Choose a service:</option>
+        <option value="hospital">Hospital</option>
+        <option value="police">Police</option>
+        <option value="fire station">Fire station</option>
+    </select>
     <button onclick="searchNearbyServices()">Search Nearby</button>
     <p id="status"></p>
   </div>
