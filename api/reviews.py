@@ -10,7 +10,6 @@ def add_review():
     user=request.form['user_name']
     rating=request.form['rating']
     review=request.form['review']
-    #data = request.json
     required_fields = [service_id,user,rating,review]
 
     # Validating all required fields
@@ -18,22 +17,12 @@ def add_review():
         if not head:
             return jsonify({"error": "Missing required field"}), 400
 
-    # Validating service_id
-    #service_id = data.get('service_id')
-    #if not isinstance(service_id, int) or service_id <= 0:
-    #    return jsonify({"error": "Invalid service_id"}), 400
-
     #sql query to insert review
     sql = """INSERT INTO reviews (service_id,user_name,rating,review) VALUES (%s,%s,%s,%s);"""
 
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Check if the emergency service exists
-                #cur.execute("SELECT id FROM emergency_services WHERE id = %s", (service_id,))
-                #service_exists = cur.fetchone()
-                #if not service_exists:
-                #    return jsonify({"error": "Service not found"}), 404
 
                 # Insert review into the database
                 cur.execute(sql, (service_id, user,rating,review))
