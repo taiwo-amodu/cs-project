@@ -62,7 +62,7 @@
   <!-- Controls -->
   <div class="controls">
     <button onclick="getUserLocation()">Find My Location</button>
-    <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)">
+    <input type="text" id="searchService" placeholder="Enter service type (e.g., hospital, police, fire station)" style="width:280px">
     <button onclick="searchNearbyServices()">Search Nearby</button>
     <p id="status"></p>
   </div>
@@ -196,10 +196,10 @@
                         <label for="userReview">Write a Review:</label>        
                         <form action="{{url_for('reviews.add_review')}}" method="POST">
                             <input type="hidden" name="service_id" value=${id}>
-                            <input type="text" name="user_name" placeholder="Your Name">
-                            <input type="number" name="rating" min="1" max="5">
-                            <input type="text" name="review" placeholder="Review">
-                            <input type="submit" value="Submit Review">
+                            <input type="text" name="user_name" placeholder="Your Name" style="width:328px">
+                            <input type="number" name="rating" min="1" max="5" placeholder="Rating (1-5)" style="width:150px">
+                            <input type="text" name="review" placeholder="Review" style="width: 500px">
+                            <input type="submit" value="Submit Review" style="width:520px">
                         </form>
                     </div>
                 `;
