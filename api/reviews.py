@@ -1,11 +1,14 @@
 from flask import Blueprint, request, jsonify
 from .db import get_db_connection
 
+#make flask blueprint connection
 reviews_bp = Blueprint('reviews', __name__)
 
+#api to add reviews
 @reviews_bp.route('/api/add-review', methods=['POST'])
 def add_review():
     """Add a review for an emergency service."""
+    #gets information from user selected service and typed information
     service_id=request.form['service_id']
     user=request.form['user_name']
     rating=request.form['rating']
@@ -20,6 +23,7 @@ def add_review():
     #sql query to insert review
     sql = """INSERT INTO reviews (service_id,user_name,rating,review) VALUES (%s,%s,%s,%s);"""
 
+    #creates database connection
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -33,12 +37,14 @@ def add_review():
     except Exception as e:
         return jsonify({"error": f"Failed to add review: {str(e)}"}), 500
 
-
+#api to recieve reviews
 @reviews_bp.route('/api/get_review', methods=['GET'])
 def get_reviews():
     """Fetch reviews for a specific service."""
+    #query with selected service id
     sql = """SELECT user_name, rating, review FROM reviews WHERE service_id=%s"""
     data=request.json
+    
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
