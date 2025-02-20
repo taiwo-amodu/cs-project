@@ -248,6 +248,10 @@ def get_route_to_service():
 
 # ESL Frontend
 # Future Improvements
+- Include information on service availability, such as 24/7 emergency response or limited hours of operation, and other relevant information that can help the users.  
+- Allow filtering by multiple criteria such as service type, availability, or distance.  
+- Include a list of services and rank based on distance, user ratings, or urgency level.  
+- Allow users to save frequently used services and get personalized recommendations.  
 
 
 
