@@ -40,6 +40,147 @@ The ETL pipeline uses the Overpass API to extract emergency service data from OS
 The API was divided into three parts: **Services**, **Routing**, and **Reviews** to keep the backend structured and manageable.  
 ## Services API (services.py) 
 ***Handles emergency service locations, fetching details such as hospitals, police stations, and fire stations from a database.***  
+
+**Fetching All Emergency Services**  
+Retrieves all available emergency services from the database. Uses PostGIS functions ST_X() and ST_Y() to extract latitude and longitude from the GEOMETRY column and returns a JSON array containing all services.
+```bash
+@services_bp.route('/api/add-service', methods=['POST'])
+def add_service():
+    """Add a new emergency service with PostGIS location storage."""
+    data = request.json
+    required_fields = ['name', 'type', 'latitude', 'longitude', 'address', 'contact_info']
+
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        lat, lon = float(data['latitude']), float(data['longitude'])
+    except ValueError:
+        return jsonify({"error": "Latitude and Longitude must be valid numbers"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO emergency_services (name, type, location, address, contact_info)
+                    VALUES (%s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s);
+                """, (data['name'], data['type'], lon, lat, data['address'], data['contact_info']))
+                conn.commit()
+
+        return jsonify({"message": "Service added successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": f"Failed to add service: {str(e)}"}), 500
+```
+**Adding a New Emergency Service**  
+Adds a new emergency service, storing its location as a PostGIS point. Uses ST_SetSRID(ST_MakePoint(lon, lat), 4326) to store location as a GEOMETRY point, ensures all required fields are present and valid and returns a 201 Created response on success.
+```bash
+@services_bp.route('/api/add-service', methods=['POST'])
+def add_service():
+    """Add a new emergency service with PostGIS location storage."""
+    data = request.json
+    required_fields = ['name', 'type', 'latitude', 'longitude', 'address', 'contact_info']
+
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        lat, lon = float(data['latitude']), float(data['longitude'])
+    except ValueError:
+        return jsonify({"error": "Latitude and Longitude must be valid numbers"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO emergency_services (name, type, location, address, contact_info)
+                    VALUES (%s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s);
+                """, (data['name'], data['type'], lon, lat, data['address'], data['contact_info']))
+                conn.commit()
+
+        return jsonify({"message": "Service added successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": f"Failed to add service: {str(e)}"}), 500
+```
+**Deleting a Service by ID**  
+Deletes a specific emergency service by its ID. First, it checks if the service exists before deletion and then deletes the service if found and returns a 200 OK response.
+```bash
+@services_bp.route('/api/delete-service/<int:service_id>', methods=['DELETE'])
+def delete_service(service_id):
+    """Delete an emergency service by ID."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM emergency_services WHERE id = %s", (service_id,))
+                service = cur.fetchone()
+                
+                if not service:
+                    return jsonify({"error": "Service not found"}), 404
+
+                cur.execute("DELETE FROM emergency_services WHERE id = %s", (service_id,))
+                conn.commit()
+
+        return jsonify({"message": f"Service with ID {service_id} deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to delete service: {str(e)}"}), 500
+```
+**Searching for Services by Type & Proximity**  
+Finds nearby emergency services of a specified type within a given radius. Uses ST_DWithin(location, ST_SetSRID(ST_MakePoint(lon, lat), 4326), radius_m) to find nearby services. Filters results by service type and returns a JSON list of emergency services within the specified radius.
+```bash
+@services_bp.route('/api/search-services', methods=['GET'])
+def search_services():
+    """Find services by type and within a given radius using GEOMETRY."""
+    service_type = request.args.get('type')
+    user_lat = request.args.get('lat')
+    user_lng = request.args.get('lng')
+    radius_km = request.args.get('radius', 2)  # Default 2km
+
+    if not service_type or not user_lat or not user_lng:
+        return jsonify({"error": "Missing parameters (type, lat, lng)"}), 400
+
+    try:
+        user_lat, user_lng = float(user_lat), float(user_lng)
+        radius_m = float(radius_km) * 1000  # Convert km to meters
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT 
+                id, 
+                name, 
+                type, 
+                address, 
+                contact_info, 
+                ST_AsText(location) AS location
+            FROM emergency_services 
+            WHERE type = %s
+            AND ST_DWithin(
+                location, 
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326), 
+                %s
+            );
+        """, (service_type, user_lng, user_lat, radius_m))
+
+        services = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Convert results into JSON format
+        nearby_services = []
+        for s in services:
+            geo_point = s[5].replace("POINT(", "").replace(")", "").split()
+            service_lng, service_lat = map(float, geo_point)
+
+            nearby_services.append({
+                "id": s[0], "name": s[1], "type": s[2], "address": s[3], "contact_info": s[4],
+                "latitude": service_lat, "longitude": service_lng
+            })
+
+        return jsonify(nearby_services)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+```
 ## Routing API (routing.py) 
 ***Provides route calculations to help users navigate to the nearest emergency service.***  
 
@@ -59,7 +200,7 @@ cur.execute("""
     LIMIT 1;
 """, (user_lon, user_lat))
 ```
-The function get_route_from_google(user_lon, user_lat, service_lon, service_lat) sends a request to Google Maps Directions API to retrieve the best driving route.
+The function get_route_from_google(user_lon, user_lat, service_lon, service_lat) sends a request to Google Maps Directions API to retrieve the best driving route. It extracts and formats polylines to visualize the route.
 ```bash
 params = {
     "origin": f"{user_lat},{user_lon}",
@@ -70,7 +211,38 @@ params = {
 
 response = requests.get(google_url, params=params, timeout=5)
 ```
+API Endpoint: /api/route-to-service
+- Receives latitude and longitude from the user.  
+- Calls get_nearest_service() to find the closest emergency service.  
+- Calls get_route_from_google() to get directions.  
+- Returns a structured JSON response.  
+```bash
+@routing_bp.route('/api/route-to-service', methods=['GET'])
+def get_route_to_service():
+    user_lon = request.args.get('longitude')
+    user_lat = request.args.get('latitude')
 
+    if not user_lon or not user_lat:
+        return jsonify({"error": "Missing required parameters: latitude, longitude"}), 400
+
+    nearest_service = get_nearest_service(float(user_lon), float(user_lat))
+
+    if not nearest_service:
+        return jsonify({"error": "No emergency services found"}), 404
+
+    route = get_route_from_google(float(user_lon), float(user_lat),
+                                  nearest_service["longitude"], nearest_service["latitude"])
+
+    if not route:
+        return jsonify({"error": "No route found"}), 404
+
+    return jsonify({
+        "message": "Route fetched successfully",
+        "user_location": {"longitude": user_lon, "latitude": user_lat},
+        "nearest_service": nearest_service,
+        "route": route
+    }), 200
+```
 ## Reviews API (reviews.py)  
 ***Manages user-submitted reviews and ratings for emergency service locations.***   
 
