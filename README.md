@@ -246,6 +246,20 @@ def get_route_to_service():
 ## Reviews API (reviews.py)  
 ***Manages user-submitted reviews and ratings for emergency service locations.***   
 
+**Adding a Review**  
+This endpoint allows users to submit reviews for a specific emergency service. Validates that all required fields are provided before storing the review. Stores the review in the database.
+```bash
+service_id = request.form['service_id']
+user = request.form['user_name']
+rating = request.form['rating']
+review = request.form['review']
+```
+**Retrieving the Reviews**  
+This endpoint fetches all reviews for a specific emergency service based on service_id. It fetches all reviews associated with the given service_id and returns them as JSON responses.
+```bash
+sql = """SELECT user_name, rating, review FROM reviews WHERE service_id=%s"""
+cur.execute(sql, (data['service_id']))
+```
 # ESL Frontend
 This is the frontend of the Emergenceny Service Locator. Several buttons can be foun in the top left corner where users can click on the "Find my Location" button to show their current location in the map. A dropdown list can also be found which shows the list of the service types and the users can select which type of service they are looking for. After selecting the service type the users can click "Serach Nearby" button to see the location of the nearest services in their current location.
 ![image](https://github.com/user-attachments/assets/9af3fe71-c2b8-4b9b-adc2-6120e18b3133)
