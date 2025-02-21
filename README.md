@@ -247,6 +247,14 @@ def get_route_to_service():
 ***Manages user-submitted reviews and ratings for emergency service locations.***   
 
 # ESL Frontend
+This is the frontend of the Emergenceny Service Locator. Several buttons can be foun in the top left corner where users can click on the "Find my Location" button to show their current location in the map. A dropdown list can also be found which shows the list of the service types and the users can select which type of service they are looking for. After selecting the service type the users can click "Serach Nearby" button to see the location of the nearest services in their current location.
+![image](https://github.com/user-attachments/assets/9af3fe71-c2b8-4b9b-adc2-6120e18b3133)
+![image](https://github.com/user-attachments/assets/b2190dc3-0406-44d8-8034-d5ef7c210e9c)  
+
+When a user selects a service a route going to the service will be shown in the map and the relevant details about the selected service. Users can also submit a review about the service that they have selected.
+![image](https://github.com/user-attachments/assets/a9b1d933-b4f0-4a4a-a326-abc5036a539c)
+![image](https://github.com/user-attachments/assets/d464bb20-cc4b-492e-8ef3-153adb04ef4c)
+
 # Future Improvements
 - Include information on service availability, such as 24/7 emergency response or limited hours of operation, and other relevant information that can help the users.  
 - Allow filtering by multiple criteria such as service type, availability, or distance.  
